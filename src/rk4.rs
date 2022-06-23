@@ -14,7 +14,6 @@ pub fn rk4(u: f64) -> [[f64; 111];3] {
     p[0] = P0;
     t[0] = T0;
     l[0] = calc_l(P0, u*calc_es(T0), T0 + KELVIN);
-    println!("L0 is {}", l[0]);
     // solving
     for i in 1..111 {
         // first approximaiton
@@ -49,7 +48,6 @@ pub fn rk4(u: f64) -> [[f64; 111];3] {
         t[i] = t1 - (kt1 + 2.0 * kt2 + 2.0 * kt3 + kt4) * DH / 6.0;
         p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
         l[i] = kt1;
-        println!("{}",l[i]);
     }
     [p, t, l]
  }
