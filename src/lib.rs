@@ -55,12 +55,12 @@ pub fn rk4(u: f64) -> *const [[f64; 111];3] {
         p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
         l[i] = kt1;
     }
-    let soln = [p,t,l];
+    let soln: [[f64;111];3] = [p,t,l];
     std::ptr::addr_of!(soln)
  }
 
  #[wasm_bindgen]
- pub fn euler(u: f64) -> *mut [[f64; 1101];3] {
+ pub fn euler(u: f64) -> *const [[f64; 1101];3] {
     let (mut p, mut t, mut l) : ([f64; 1101],[f64; 1101],[f64; 1101]) = ([0.0;1101],[0.0;1101],[0.0;1101]);
     let (mut t1, mut ues1, mut tk1) : (f64, f64, f64);
     p[0] = P0;
@@ -74,6 +74,6 @@ pub fn rk4(u: f64) -> *const [[f64; 111];3] {
         p[i] = p[i - 1] + DHE * calc_dp(p[i - 1], ues1, tk1);
         l[i] = calc_l(p[i], ues1, tk1);
     }
-    let test_ptr: *mut [[f64;1101];3] = &mut [p, t, l];
-    test_ptr
+    let soln: [[f64;1101];3] = [p,t,l];
+    std::ptr::addr_of!(soln)
 }
