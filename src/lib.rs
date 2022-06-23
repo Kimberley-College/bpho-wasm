@@ -6,6 +6,7 @@ use consts::*;
 use functions::*;
 use wasm_bindgen::prelude::*;
 
+// Runge-Kutta 4th Order
 #[wasm_bindgen]
 pub fn rk4(u: f64) -> *const [[f64; 111];3] {
     // stack allocations
@@ -59,6 +60,7 @@ pub fn rk4(u: f64) -> *const [[f64; 111];3] {
     std::ptr::addr_of!(soln)
  }
 
+ // Euler's Method
  #[wasm_bindgen]
  pub fn euler(u: f64) -> *const [[f64; 1101];3] {
     let (mut p, mut t, mut l) : ([f64; 1101],[f64; 1101],[f64; 1101]) = ([0.0;1101],[0.0;1101],[0.0;1101]);

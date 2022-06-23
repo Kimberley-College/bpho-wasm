@@ -1,3 +1,4 @@
+//* JUST FOR CHECKING VALUES ARE RIGHT */
 pub fn _display_rk4(soln: [[f64;111];3]) {
     println!("h       p      t      l");
     for i in 0..23 {
