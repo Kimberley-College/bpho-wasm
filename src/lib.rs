@@ -1,10 +1,14 @@
 mod consts;
 mod functions;
 mod other;
-
+extern crate wasm_bindgen;
 use consts::*;
 use functions::*;
 use wasm_bindgen::prelude::*;
+
+#[cfg(feature = "wee_alloc")]
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 // Runge-Kutta 4th Order
 #[wasm_bindgen]
