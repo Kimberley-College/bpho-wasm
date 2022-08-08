@@ -1,30 +1,50 @@
-mod consts;
-mod functions;
-mod other;
+//! A rust implementation of Runge-Kutta's 4th Order and Euler's methods to solve the ODE system laid out in the BPhO Computational Challenge 2022.
 extern crate wasm_bindgen;
-use consts::*;
-use functions::*;
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+// initial pressure
+const P0: f32 = 1013.25; 
+// initial temperature
+const T0: f32 = 15.0; 
+// step size for rk4
+const DH: f32 = 0.1; 
+// step size for euler
+const DHE: f32 = 0.01; 
+// for celcius <-> kelvin
+const KELVIN: f32 = 273.15; 
 
-// Runge-Kutta 4th Order
+// calculating relative humidity
+#[inline(always)]
+fn calc_es(t: f32) -> f32 {
+    6.1121 * ((18.678 - t / 234.5) * (t / (t + 257.14))).exp()
+}
+// calculating dp/dh
+#[inline(always)]
+fn calc_dp(p: f32, ues: f32, tk: f32) -> f32 {
+    -34.171 * (p - 0.37776 * ues) / tk
+}
+// calculating lapse rate
+#[inline(always)]
+fn calc_l(p: f32, ues: f32, tk: f32) -> f32 {
+    let r = ues / (p - ues);
+    9.7734 * (tk + 5420.3 * r) / (tk * tk + 8400955.5 * r) * tk
+}
+
+/// Runge-Kutta 4th Order
 #[wasm_bindgen]
 pub fn rk4(u: f32) -> Box<[f32]> {
-    // stack allocations
-    let (mut p, mut t, mut l) : ([f32; 111],[f32; 111],[f32; 111]) = ([0.0;111],[0.0;111],[0.0;111]);
-    let (mut t1, mut t2, mut t3, mut t4) : (f32, f32, f32, f32);
-    let (mut p1, mut p2, mut p3, mut p4) : (f32, f32, f32, f32);
-    let (mut ues1, mut ues2, mut ues3, mut ues4) : (f32, f32, f32, f32);
-    let (mut tk1, mut tk2, mut tk3, mut tk4) : (f32, f32, f32, f32);
-    let (mut kt1, mut kt2, mut kt3, mut kt4) : (f32, f32, f32, f32);
-    let (mut kp1, mut kp2, mut kp3, mut kp4) : (f32, f32, f32, f32);
+    // memory allocations
+    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
+    let (mut t1, mut t2, mut t3, mut t4): (f32, f32, f32, f32);
+    let (mut p1, mut p2, mut p3, mut p4): (f32, f32, f32, f32);
+    let (mut ues1, mut ues2, mut ues3, mut ues4): (f32, f32, f32, f32);
+    let (mut tk1, mut tk2, mut tk3, mut tk4): (f32, f32, f32, f32);
+    let (mut kt1, mut kt2, mut kt3, mut kt4): (f32, f32, f32, f32);
+    let (mut kp1, mut kp2, mut kp3, mut kp4): (f32, f32, f32, f32);
     // initial conditions
     p[0] = P0;
     t[0] = T0;
-    l[0] = calc_l(P0, u*calc_es(T0), T0 + KELVIN);
+    l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
     // solving
     for i in 1..111 {
         // first approximaiton
@@ -60,21 +80,21 @@ pub fn rk4(u: f32) -> Box<[f32]> {
         p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
         l[i] = kt1;
     }
-    [p,t,l].concat().into_boxed_slice()
- }
+    [p, t, l].concat().into_boxed_slice()
+}
 
- // Euler's Method
- #[wasm_bindgen]
- pub fn euler(u: f32) -> Box<[f32]> {
-    let (mut p, mut t, mut l) : ([f32; 111],[f32; 111],[f32; 111]) = ([0.0;111],[0.0;111],[0.0;111]);
-    let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm) : (f32, f32, f32, f32, f32, f32);
+/// Euler's Method
+#[wasm_bindgen]
+pub fn euler(u: f32) -> Box<[f32]> {
+    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
+    let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm): (f32, f32, f32, f32, f32, f32);
     p[0] = P0;
     t[0] = T0;
     l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
     for i in 1..111 {
-        tm = t[i-1];
-        lm = l[i-1];
-        pm = p[i-1];
+        tm = t[i - 1];
+        lm = l[i - 1];
+        pm = p[i - 1];
         for _ in 0..10 {
             t1 = tm - lm * DHE;
             ues1 = u * calc_es(t1);
@@ -87,5 +107,5 @@ pub fn rk4(u: f32) -> Box<[f32]> {
         l[i] = lm;
         p[i] = pm;
     }
-    [p,t,l].concat().into_boxed_slice()
+    [p, t, l].concat().into_boxed_slice()
 }
