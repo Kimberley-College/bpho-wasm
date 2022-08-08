@@ -11,7 +11,10 @@ const DH: f32 = 0.1;
 // step size for euler
 const DHE: f32 = 0.01; 
 // for celcius <-> kelvin
-const KELVIN: f32 = 273.15; 
+const KELVIN: f32 = 273.15;
+// August-Roche-Magnus approximation constants
+const A: f32 = 17.625;
+const B: f32 = 243.04; 
 
 // calculating relative humidity
 #[inline(always)]
@@ -29,6 +32,15 @@ fn calc_l(p: f32, ues: f32, tk: f32) -> f32 {
     let r = ues / (p - ues);
     9.7734 * (tk + 5420.3 * r) / (tk * tk + 8400955.5 * r) * tk
 }
+// calculating dew-point temperature
+fn calc_dew(t: f32, u: f32) -> f32 {
+    B * (u.ln() + A * t / (B + t) ) / (A - u.ln() - A * t / (B + t))
+}
+// calculating boiling temperature
+fn calc_boil(p: f32) -> f32 {
+    1.0 / (1.0/(100.0 + KELVIN) - 8.314 / 2501000.0 * (p / P0).ln())
+}
+
 
 /// Runge-Kutta 4th Order
 #[wasm_bindgen]
@@ -80,7 +92,9 @@ pub fn rk4(u: f32) -> Box<[f32]> {
         p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
         l[i] = kt1;
     }
-    [p, t, l].concat().into_boxed_slice()
+    let tdew = t.map(|x| calc_dew(x, u));
+    let tboil = p.map(calc_boil);
+    [p, t, l, tdew, tboil].concat().into_boxed_slice()
 }
 
 /// Euler's Method
@@ -107,5 +121,18 @@ pub fn euler(u: f32) -> Box<[f32]> {
         l[i] = lm;
         p[i] = pm;
     }
-    [p, t, l].concat().into_boxed_slice()
+    let tdew = t.map(|x| calc_dew(x, u));
+    let tboil = p.map(calc_boil);
+    [p, t, l, tdew, tboil].concat().into_boxed_slice()
+}
+
+#[wasm_bindgen(js_name = eulerShort)]
+pub fn euler_short(u: f32, p0: f32, t0: f32) -> Box<[f32]> {
+    let es = |t: f32| 6.1121 *  ((18.678 - t / 234.5) * (t / (t + 257.14))).exp();
+    let dp = |p: f32, ues: f32, tk: f32| -34.171 * (p - 0.37776 * ues) / tk;
+    let l = |p: f32, ues: f32, tk: f32| 9.7734 * (tk + 5420.3 * ues / (p - ues)) / (tk * tk + 8400955.5 * ues / (p - ues)) * tk;
+    let next = |u: f32, x: [f32; 3]| [x[0] + 0.01 * dp(x[0], u * es(x[1]), x[1] + 273.15), x[1] - 0.01 * x[2], l(x[0], u * es(x[1]), x[1] + 273.15)];
+    let mut soln = vec![[p0, t0, l(p0, u * es(t0), t0 + 273.15)]];
+    for _ in 1..1101 { soln.push(next(u, *soln.last().unwrap())); }
+    soln.concat().into_boxed_slice()
 }
