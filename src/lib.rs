@@ -38,7 +38,7 @@ fn calc_dew(t: f32, u: f32) -> f32 {
 }
 // calculating boiling temperature
 fn calc_boil(p: f32) -> f32 {
-    1.0 / (1.0/(100.0 + KELVIN) - 8.314 / 2501000.0 * (p / P0).ln())
+    1.0 / (1.0/(100.0 + KELVIN) - 8.314 / 45070.0 * (p / P0).ln()) - KELVIN
 }
 
 
