@@ -1,10 +1,45 @@
-use super::*;
+// step size for rk4
+const DH: f32 = 0.1;
+// step size for euler
+const DHE: f32 = 0.01;
+// for celcius <-> kelvin
+const KELVIN: f32 = 273.15;
+// August-Roche-Magnus approximation constants
+const A: f32 = 17.625;
+const B: f32 = 243.04;
+
+// calculating relative humidity
+#[inline(always)]
+fn calc_es(t: f32) -> f32 {
+    6.1121 * ((18.678 - t / 234.5) * (t / (t + 257.14))).exp()
+}
+// calculating dp/dh
+#[inline(always)]
+fn calc_dp(p: f32, ues: f32, tk: f32) -> f32 {
+    -34.171 * (p - 0.37776 * ues) / tk
+}
+// calculating lapse rate
+#[inline(always)]
+fn calc_l(p: f32, ues: f32, tk: f32) -> f32 {
+    let r = ues / (p - ues);
+    9.7734 * (tk + 5420.3 * r) / (tk * tk + 8400955.5 * r) * tk
+}
+// calculating dew-point temperature
+#[inline(always)]
+fn calc_dew(t: f32, u: f32) -> f32 {
+    B * (u.ln() + A * t / (B + t)) / (A - u.ln() - A * t / (B + t))
+}
+// calculating boiling temperature
+#[inline(always)]
+fn calc_boil(p: f32) -> f32 {
+    1.0 / (1.0 / (100.0 + KELVIN) - 8.314 / 45070.0 * (p / 1013.25).ln()) - KELVIN
+}
 
 /// Runge-Kutta 4th Order
 #[inline(always)]
 pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
     // memory allocations
-    let mut soln = [[0.0;111];5];
+    let mut soln = [[0.0; 111]; 5];
     let (mut t1, mut t2, mut t3, mut t4): (f32, f32, f32, f32);
     let (mut p1, mut p2, mut p3, mut p4): (f32, f32, f32, f32);
     let (mut ues1, mut ues2, mut ues3, mut ues4): (f32, f32, f32, f32);
@@ -60,7 +95,7 @@ pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
 /// Euler's Method
 #[inline(always)]
 pub fn euler(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
-    let mut soln = [[0.0;111];5];
+    let mut soln = [[0.0; 111]; 5];
     let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm): (f32, f32, f32, f32, f32, f32);
     soln[0][0] = p0;
     soln[1][0] = t0;
@@ -86,15 +121,4 @@ pub fn euler(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
         soln[4][i] = calc_boil(pm);
     }
     soln
-}
-
-#[wasm_bindgen(js_name = eulerShort)]
-pub fn euler_short(u: f32, p0: f32, t0: f32) -> Box<[f32]> {
-    let es = |t: f32| 6.1121 *  ((18.678 - t / 234.5) * (t / (t + 257.14))).exp();
-    let dp = |p: f32, ues: f32, tk: f32| -34.171 * (p - 0.37776 * ues) / tk;
-    let l = |p: f32, ues: f32, tk: f32| 9.7734 * (tk + 5420.3 * ues / (p - ues)) / (tk * tk + 8400955.5 * ues / (p - ues)) * tk;
-    let next = |u: f32, x: [f32; 3]| [x[0] + 0.01 * dp(x[0], u * es(x[1]), x[1] + 273.15), x[1] - 0.01 * x[2], l(x[0], u * es(x[1]), x[1] + 273.15)];
-    let mut soln = vec![[p0, t0, l(p0, u * es(t0), t0 + 273.15)]];
-    for _ in 1..1101 { soln.push(next(u, *soln.last().unwrap())); }
-    soln.concat().into_boxed_slice()
 }
