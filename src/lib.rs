@@ -27,7 +27,7 @@ use schemes::*;
 #[wasm_bindgen(js_name = eulerScheme)]
 pub fn euler_scheme(u: f32, tolerance: f32) -> Box<[f32]> {
     let soln = euler(u, P0, T0);
-    let mut result = Vec::with_capacity(32);
+    let mut result = Vec::with_capacity(256);
     for i in soln.iter() {
         let v = ramer_douglas_peucker(&HVALS, i, tolerance);
         result.extend(v);
@@ -38,7 +38,7 @@ pub fn euler_scheme(u: f32, tolerance: f32) -> Box<[f32]> {
 #[wasm_bindgen(js_name = rkScheme)]
 pub fn rk4_scheme(u: f32, tolerance: f32) -> Box<[f32]> {
     let soln = rk4(u, P0, T0);
-    let mut result = Vec::with_capacity(32);
+    let mut result = Vec::with_capacity(256);
     for i in soln.iter() {
         let v = ramer_douglas_peucker(&HVALS, i, tolerance);
         result.extend(v);
