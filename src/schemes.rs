@@ -1,7 +1,8 @@
 use super::*;
 
 /// Runge-Kutta 4th Order
-pub fn rk4(u: f32) -> [[f32; 111]; 5] {
+#[inline(always)]
+pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
     // memory allocations
     let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
     let (mut t1, mut t2, mut t3, mut t4): (f32, f32, f32, f32);
@@ -11,9 +12,9 @@ pub fn rk4(u: f32) -> [[f32; 111]; 5] {
     let (mut kt1, mut kt2, mut kt3, mut kt4): (f32, f32, f32, f32);
     let (mut kp1, mut kp2, mut kp3, mut kp4): (f32, f32, f32, f32);
     // initial conditions
-    p[0] = P0;
-    t[0] = T0;
-    l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
+    p[0] = p0;
+    t[0] = t0;
+    l[0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
     // solving
     for i in 1..111 {
         // first approximaiton
@@ -55,12 +56,13 @@ pub fn rk4(u: f32) -> [[f32; 111]; 5] {
 }
 
 /// Euler's Method
-pub fn euler(u: f32) -> [[f32; 111]; 5] {
+#[inline(always)]
+pub fn euler(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
     let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
     let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm): (f32, f32, f32, f32, f32, f32);
-    p[0] = P0;
-    t[0] = T0;
-    l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
+    p[0] = p0;
+    t[0] = t0;
+    l[0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
     for i in 1..111 {
         tm = t[i - 1];
         lm = l[i - 1];

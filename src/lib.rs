@@ -52,22 +52,22 @@ use schemes::*;
 use algorithms::ramer_douglas_peucker;
 
 #[wasm_bindgen(js_name = eulerScheme)]
-pub fn euler_scheme(u: f32) -> Box<[f32]> {
-    let soln = euler(u);
+pub fn euler_scheme(u: f32, tolerance: f32) -> Box<[f32]> {
+    let soln = euler(u, P0, T0);
     let mut result = Vec::with_capacity(100);
     for i in soln.iter() {
-        let v = ramer_douglas_peucker(&HVALS, i, 0.02);
+        let v = ramer_douglas_peucker(&HVALS, i, tolerance);
         result.extend(v);
     }
     result.into_boxed_slice()
 }
 
 #[wasm_bindgen(js_name = rkScheme)]
-pub fn rk4_scheme(u: f32) -> Box<[f32]> {
-    let soln = rk4(u);
+pub fn rk4_scheme(u: f32, tolerance: f32) -> Box<[f32]> {
+    let soln = rk4(u, P0, T0);
     let mut result = Vec::with_capacity(100);
     for i in soln.iter() {
-        let v = ramer_douglas_peucker(&HVALS, i, 0.02);
+        let v = ramer_douglas_peucker(&HVALS, i, tolerance);
         result.extend(v);
     }
     result.into_boxed_slice()
