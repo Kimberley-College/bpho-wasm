@@ -10,3 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wasm-bindgen = "0.2.63"
+
+[profile.release]
+codegen-units = 1
+lto = true
