@@ -85,7 +85,7 @@ pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
         // weighted final approximation
         soln[0][i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
         soln[1][i] = t1 - (kt1 + 2.0 * kt2 + 2.0 * kt3 + kt4) * DH / 6.0;
-        soln[2][i] = kt1;
+        soln[2][i] = calc_l(soln[0][i], u * calc_es(soln[1][i]), soln[1][i] + KELVIN);
         soln[3][i] = calc_dew(soln[1][i], u);
         soln[4][i] = calc_boil(soln[0][i]);
     }
