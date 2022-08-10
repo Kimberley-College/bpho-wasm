@@ -4,7 +4,7 @@ use super::*;
 #[inline(always)]
 pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
     // memory allocations
-    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
+    let mut soln = [[0.0;111];5];
     let (mut t1, mut t2, mut t3, mut t4): (f32, f32, f32, f32);
     let (mut p1, mut p2, mut p3, mut p4): (f32, f32, f32, f32);
     let (mut ues1, mut ues2, mut ues3, mut ues4): (f32, f32, f32, f32);
@@ -12,14 +12,16 @@ pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
     let (mut kt1, mut kt2, mut kt3, mut kt4): (f32, f32, f32, f32);
     let (mut kp1, mut kp2, mut kp3, mut kp4): (f32, f32, f32, f32);
     // initial conditions
-    p[0] = p0;
-    t[0] = t0;
-    l[0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
+    soln[0][0] = p0;
+    soln[1][0] = t0;
+    soln[2][0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
+    soln[3][0] = calc_dew(t0, u);
+    soln[4][0] = calc_boil(p0);
     // solving
     for i in 1..111 {
         // first approximaiton
-        p1 = p[i - 1];
-        t1 = t[i - 1];
+        p1 = soln[0][i - 1];
+        t1 = soln[1][i - 1];
         ues1 = u * calc_es(t1);
         tk1 = t1 + KELVIN;
         kt1 = calc_l(p1, ues1, tk1);
@@ -46,27 +48,29 @@ pub fn rk4(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
         kt4 = calc_l(p4, ues4, tk4);
         kp4 = calc_dp(p4, ues4, tk4);
         // weighted final approximation
-        t[i] = t1 - (kt1 + 2.0 * kt2 + 2.0 * kt3 + kt4) * DH / 6.0;
-        p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
-        l[i] = kt1;
+        soln[0][i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
+        soln[1][i] = t1 - (kt1 + 2.0 * kt2 + 2.0 * kt3 + kt4) * DH / 6.0;
+        soln[2][i] = kt1;
+        soln[3][i] = calc_dew(soln[1][i], u);
+        soln[4][i] = calc_boil(soln[0][i]);
     }
-    let tdew = t.map(|x| calc_dew(x, u));
-    let tboil = p.map(calc_boil);
-    [p, t, l, tdew, tboil]
+    soln
 }
 
 /// Euler's Method
 #[inline(always)]
 pub fn euler(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
-    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
+    let mut soln = [[0.0;111];5];
     let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm): (f32, f32, f32, f32, f32, f32);
-    p[0] = p0;
-    t[0] = t0;
-    l[0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
+    soln[0][0] = p0;
+    soln[1][0] = t0;
+    soln[2][0] = calc_l(p0, u * calc_es(t0), t0 + KELVIN);
+    soln[3][0] = calc_dew(t0, u);
+    soln[4][0] = calc_boil(p0);
     for i in 1..111 {
-        tm = t[i - 1];
-        lm = l[i - 1];
-        pm = p[i - 1];
+        pm = soln[0][i - 1];
+        tm = soln[1][i - 1];
+        lm = soln[2][i - 1];
         for _ in 0..10 {
             t1 = tm - lm * DHE;
             ues1 = u * calc_es(t1);
@@ -75,13 +79,13 @@ pub fn euler(u: f32, p0: f32, t0: f32) -> [[f32; 111]; 5] {
             pm = pm + DHE * calc_dp(pm, ues1, tk1);
             lm = calc_l(pm, ues1, tk1);
         }
-        t[i] = tm;
-        l[i] = lm;
-        p[i] = pm;
+        soln[0][i] = pm;
+        soln[1][i] = tm;
+        soln[2][i] = lm;
+        soln[3][i] = calc_dew(tm, u);
+        soln[4][i] = calc_boil(pm);
     }
-    let tdew = t.map(|x| calc_dew(x, u));
-    let tboil = p.map(calc_boil);
-    [p, t, l, tdew, tboil]
+    soln
 }
 
 #[wasm_bindgen(js_name = eulerShort)]
