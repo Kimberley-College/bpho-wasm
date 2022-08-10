@@ -1,5 +1,5 @@
 #[allow(clippy::too_many_arguments)]
-fn rdp_step(x: &[f32], y: &[f32], first: usize, last: usize, epsilon: f32, xnew: &mut Vec<f32>, ynew: &mut Vec<f32>, count: &mut f32) {
+fn rdp_step(x: &[f32], y: &[f32], first: usize, last: usize, epsilon: f32, xnew: &mut [f32], ynew: &mut [f32], count: &mut usize) {
     let mut dmax: f32 = 0.0;
     let mut idx: usize = 0;
     let mut d: f32;
@@ -17,24 +17,25 @@ fn rdp_step(x: &[f32], y: &[f32], first: usize, last: usize, epsilon: f32, xnew:
         if idx > first + 1 {
             rdp_step(x, y, first, idx, epsilon, xnew, ynew, count)
         } 
-        *count += 1.0;
-        xnew.push(x[idx]);
-        ynew.push(y[idx]);
+        xnew[*count] = x[idx];
+        ynew[*count] = y[idx];
+        *count += 1;
         if last > idx + 1 {
             rdp_step(x, y, idx, last, epsilon, xnew, ynew, count)
         } 
     }
 }
 
-pub fn ramer_douglas_peucker(x: &[f32], y: &[f32], epsilon: f32) -> [Vec<f32>; 2] {
+pub fn ramer_douglas_peucker(x: &[f32], y: &[f32], epsilon: f32) -> Vec<f32> {
     let last = x.len() - 1;
-    let mut xnew = Vec::with_capacity(20);
-    let mut ynew = Vec::with_capacity(20);
-    xnew.push(x[0]);
-    ynew.push(y[0]);
-    let mut count: f32 = 2.0;
+    let mut xnew = [0.0;111];
+    let mut ynew = [0.0;111];
+    xnew[0] = x[0];
+    ynew[0] = y[0];
+    let mut count: usize = 1;
     rdp_step(x, y, 0, last, epsilon, &mut xnew, &mut ynew, &mut count);
-    xnew.push(x[110]);
-    ynew.push(y[110]);
-    [xnew, ynew]
+    xnew[count] = x[last];
+    ynew[count] = y[last];
+    count += 1;
+    [&[count as f32], &xnew[..count], &ynew[..count]].concat()
 }
