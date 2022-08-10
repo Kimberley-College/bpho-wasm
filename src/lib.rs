@@ -2,6 +2,9 @@
 extern crate wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
+pub mod schemes;
+pub mod algorithms;
+
 // initial pressure
 const P0: f32 = 1013.25; 
 // initial temperature
@@ -15,6 +18,8 @@ const KELVIN: f32 = 273.15;
 // August-Roche-Magnus approximation constants
 const A: f32 = 17.625;
 const B: f32 = 243.04; 
+//
+const HVALS: [f32; 111] = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.90000004, 1.0, 1.1, 1.2, 1.3000001, 1.4, 1.5, 1.6, 1.7, 1.8000001, 1.9, 2.0, 2.1000001, 2.2, 2.3, 2.4, 2.5, 2.6000001, 2.7, 2.8, 2.9, 3.0, 3.1000001, 3.2, 3.3, 3.4, 3.5, 3.6000001, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2000003, 4.3, 4.4, 4.5, 4.6, 4.7000003, 4.8, 4.9, 5.0, 5.1, 5.2000003, 5.3, 5.4, 5.5, 5.6, 5.7000003, 5.8, 5.9, 6.0, 6.1, 6.2000003, 6.3, 6.4, 6.5, 6.6, 6.7000003, 6.8, 6.9, 7.0, 7.1, 7.2000003, 7.3, 7.4, 7.5, 7.6, 7.7000003, 7.8, 7.9, 8.0, 8.1, 8.2, 8.3, 8.400001, 8.5, 8.6, 8.7, 8.8, 8.900001, 9.0, 9.1, 9.2, 9.3, 9.400001, 9.5, 9.6, 9.7, 9.8, 9.900001, 10.0, 10.1, 10.2, 10.3, 10.400001, 10.5, 10.6, 10.7, 10.8, 10.900001, 11.0];
 
 // calculating relative humidity
 #[inline(always)]
@@ -33,106 +38,33 @@ fn calc_l(p: f32, ues: f32, tk: f32) -> f32 {
     9.7734 * (tk + 5420.3 * r) / (tk * tk + 8400955.5 * r) * tk
 }
 // calculating dew-point temperature
+#[inline(always)]
 fn calc_dew(t: f32, u: f32) -> f32 {
     B * (u.ln() + A * t / (B + t) ) / (A - u.ln() - A * t / (B + t))
 }
 // calculating boiling temperature
+#[inline(always)]
 fn calc_boil(p: f32) -> f32 {
     1.0 / (1.0/(100.0 + KELVIN) - 8.314 / 45070.0 * (p / P0).ln()) - KELVIN
 }
 
+#[cfg(test)]
+mod test {
+    use crate::HVALS;
 
-/// Runge-Kutta 4th Order
-#[wasm_bindgen]
-pub fn rk4(u: f32) -> Box<[f32]> {
-    // memory allocations
-    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
-    let (mut t1, mut t2, mut t3, mut t4): (f32, f32, f32, f32);
-    let (mut p1, mut p2, mut p3, mut p4): (f32, f32, f32, f32);
-    let (mut ues1, mut ues2, mut ues3, mut ues4): (f32, f32, f32, f32);
-    let (mut tk1, mut tk2, mut tk3, mut tk4): (f32, f32, f32, f32);
-    let (mut kt1, mut kt2, mut kt3, mut kt4): (f32, f32, f32, f32);
-    let (mut kp1, mut kp2, mut kp3, mut kp4): (f32, f32, f32, f32);
-    // initial conditions
-    p[0] = P0;
-    t[0] = T0;
-    l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
-    // solving
-    for i in 1..111 {
-        // first approximaiton
-        p1 = p[i - 1];
-        t1 = t[i - 1];
-        ues1 = u * calc_es(t1);
-        tk1 = t1 + KELVIN;
-        kt1 = calc_l(p1, ues1, tk1);
-        kp1 = calc_dp(p1, ues1, tk1);
-        // second approximation
-        t2 = t1 - DH * kt1 / 2.0;
-        p2 = p1 + DH * kp1 / 2.0;
-        ues2 = u * calc_es(t2);
-        tk2 = t2 + KELVIN;
-        kt2 = calc_l(p2, ues2, tk2);
-        kp2 = calc_dp(p2, ues2, tk2);
-        // third approximation
-        t3 = t1 - DH * kt2 / 2.0;
-        p3 = p1 + DH * kp2 / 2.0;
-        ues3 = u * calc_es(t3);
-        tk3 = t3 + KELVIN;
-        kt3 = calc_l(p3, ues3, tk3);
-        kp3 = calc_dp(p3, ues3, tk3);
-        // fourth approximation
-        t4 = t1 - DH * kt3;
-        p4 = p1 + DH * kp3;
-        ues4 = u * calc_es(t4);
-        tk4 = t4 + KELVIN;
-        kt4 = calc_l(p4, ues4, tk4);
-        kp4 = calc_dp(p4, ues4, tk4);
-        // weighted final approximation
-        t[i] = t1 - (kt1 + 2.0 * kt2 + 2.0 * kt3 + kt4) * DH / 6.0;
-        p[i] = p1 + (kp1 + 2.0 * kp2 + 2.0 * kp3 + kp4) * DH / 6.0;
-        l[i] = kt1;
-    }
-    let tdew = t.map(|x| calc_dew(x, u));
-    let tboil = p.map(calc_boil);
-    [p, t, l, tdew, tboil].concat().into_boxed_slice()
-}
-
-/// Euler's Method
-#[wasm_bindgen]
-pub fn euler(u: f32) -> Box<[f32]> {
-    let (mut p, mut t, mut l): ([f32; 111], [f32; 111], [f32; 111]) = ([0.0; 111], [0.0; 111], [0.0; 111]);
-    let (mut t1, mut ues1, mut tk1, mut tm, mut pm, mut lm): (f32, f32, f32, f32, f32, f32);
-    p[0] = P0;
-    t[0] = T0;
-    l[0] = calc_l(P0, u * calc_es(T0), T0 + KELVIN);
-    for i in 1..111 {
-        tm = t[i - 1];
-        lm = l[i - 1];
-        pm = p[i - 1];
-        for _ in 0..10 {
-            t1 = tm - lm * DHE;
-            ues1 = u * calc_es(t1);
-            tk1 = t1 + KELVIN;
-            tm = t1;
-            pm = pm + DHE * calc_dp(pm, ues1, tk1);
-            lm = calc_l(pm, ues1, tk1);
+    use super::algorithms::ramer_douglas_peucker;
+    use super::schemes::*;
+    use std::time::Instant;
+    #[test]
+    fn test() {
+        let now = Instant::now();
+        //let soln = rk4(0.5);
+        //println!("Time: {} microseconds", now.elapsed().as_micros());
+        //let now = Instant::now();
+        for _ in 0..100000 {
+            let soln = euler(0.5);
+            ramer_douglas_peucker(&HVALS, &soln[0], 0.01);
         }
-        t[i] = tm;
-        l[i] = lm;
-        p[i] = pm;
+        println!("Time: {} microseconds", now.elapsed().as_micros());
     }
-    let tdew = t.map(|x| calc_dew(x, u));
-    let tboil = p.map(calc_boil);
-    [p, t, l, tdew, tboil].concat().into_boxed_slice()
-}
-
-#[wasm_bindgen(js_name = eulerShort)]
-pub fn euler_short(u: f32, p0: f32, t0: f32) -> Box<[f32]> {
-    let es = |t: f32| 6.1121 *  ((18.678 - t / 234.5) * (t / (t + 257.14))).exp();
-    let dp = |p: f32, ues: f32, tk: f32| -34.171 * (p - 0.37776 * ues) / tk;
-    let l = |p: f32, ues: f32, tk: f32| 9.7734 * (tk + 5420.3 * ues / (p - ues)) / (tk * tk + 8400955.5 * ues / (p - ues)) * tk;
-    let next = |u: f32, x: [f32; 3]| [x[0] + 0.01 * dp(x[0], u * es(x[1]), x[1] + 273.15), x[1] - 0.01 * x[2], l(x[0], u * es(x[1]), x[1] + 273.15)];
-    let mut soln = vec![[p0, t0, l(p0, u * es(t0), t0 + 273.15)]];
-    for _ in 1..1101 { soln.push(next(u, *soln.last().unwrap())); }
-    soln.concat().into_boxed_slice()
 }
